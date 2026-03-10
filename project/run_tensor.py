@@ -5,11 +5,46 @@ Be sure you have minitorch installed in you Virtual Env.
 
 import minitorch
 
-# Use this function to make a random parameter in
-# your module.
+
 def RParam(*shape):
     r = 2 * (minitorch.rand(shape) - 0.5)
     return minitorch.Parameter(r)
+
+
+class Network(minitorch.Module):
+    def __init__(self, hidden_layers):
+        super().__init__()
+
+        # Submodules
+        self.layer1 = Linear(2, hidden_layers)
+        self.layer2 = Linear(hidden_layers, hidden_layers)
+        self.layer3 = Linear(hidden_layers, 1)
+
+    def forward(self, x):
+        # Layer 1: Linear + ReLU
+        h1 = self.layer1.forward(x).relu()
+        # Layer 2: Linear + ReLU
+        h2 = self.layer2.forward(h1).relu()
+        # Layer 3: Linear + Sigmoid (output layer)
+        out = self.layer3.forward(h2).sigmoid()
+        return out
+
+
+class Linear(minitorch.Module):
+    def __init__(self, in_size, out_size):
+        super().__init__()
+        self.weights = RParam(in_size, out_size)
+        self.bias = RParam(out_size)
+        self.out_size = out_size
+
+    def forward(self, x):
+        x_ext = x.view(*x.shape, 1)
+        w_ext = self.weights.value.view(1, *self.weights.value.shape)
+        mult = x_ext * w_ext
+        reduced = mult.sum(dim=1)
+        reduced_views = reduced.view(x.shape[0], self.weights.value.shape[1])
+
+        return reduced_views + self.bias.value
 
 
 def default_log_fn(epoch, total_loss, correct, losses):

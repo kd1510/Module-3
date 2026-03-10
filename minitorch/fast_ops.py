@@ -168,8 +168,22 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        # TODO: Implement for Task 3.1.
-        raise NotImplementedError("Need to implement for Task 3.1")
+        # Create temporary index buffers
+        out_index = np.zeros(len(out_shape), dtype=np.int32)
+        in_index = np.zeros(len(in_shape), dtype=np.int32)
+
+        for i in range(len(out)):
+            # 1. Convert flat output position to multi-dimensional index
+            to_index(i, out_shape, out_index)
+
+            # 2. Map output index to input index (handling broadcasting)
+            broadcast_index(out_index, out_shape, in_shape, in_index)
+
+            # 3. Convert input index to flat position in storage
+            in_pos = index_to_position(in_index, in_strides)
+
+            # 4. Apply function and store result
+            out[i] = fn(in_storage[in_pos])
 
     return njit(_map, parallel=True)  # type: ignore
 

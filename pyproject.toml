@@ -5,6 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "minitorch"
 version = "0.5"
+dependencies = [
+    "ipdb>=0.13.13",
+]
 
 [tool.pyright]
 include = ["**/minitorch"]
