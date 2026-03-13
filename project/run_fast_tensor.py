@@ -29,8 +29,13 @@ class Network(minitorch.Module):
         self.layer3 = Linear(hidden, 1, backend)
 
     def forward(self, x):
-        # TODO: Implement for Task 3.5.
-        raise NotImplementedError("Need to implement for Task 3.5")
+        # Layer 1: Linear + ReLU
+        h1 = self.layer1.forward(x).relu()
+        # Layer 2: Linear + ReLU
+        h2 = self.layer2.forward(h1).relu()
+        # Layer 3: Linear + Sigmoid (output layer)
+        out = self.layer3.forward(h2).sigmoid()
+        return out
 
 
 class Linear(minitorch.Module):
@@ -43,8 +48,15 @@ class Linear(minitorch.Module):
         self.out_size = out_size
 
     def forward(self, x):
-        # TODO: Implement for Task 3.5.
-        raise NotImplementedError("Need to implement for Task 3.5")
+        # Transpose weights, is there a better way to do this? Maybe write that in.
+        order = list(range(self.weights.value.dims))
+        order[-2], order[-1] = order[-1], order[-2]
+        w_T = self.weights.value.permute(*order)
+
+        # Need to set batchsize in x as the first dimension
+        activations = w_T @ x.view(*x.shape, 1)
+        result = activations + self.bias.value.view(self.bias.value.shape[-1], 1)
+        return result.view(*result.shape[:-1])
 
 
 class FastTrain:
@@ -106,7 +118,7 @@ if __name__ == "__main__":
     parser.add_argument("--HIDDEN", type=int, default=10, help="number of hiddens")
     parser.add_argument("--RATE", type=float, default=0.05, help="learning rate")
     parser.add_argument("--BACKEND", default="cpu", help="backend mode")
-    parser.add_argument("--DATASET", default="simple", help="dataset")
+    parser.add_argument("--DATASET", default="split", help="dataset")
     parser.add_argument("--PLOT", default=False, help="dataset")
 
     args = parser.parse_args()
@@ -116,7 +128,7 @@ if __name__ == "__main__":
     if args.DATASET == "xor":
         data = minitorch.datasets["Xor"](PTS)
     elif args.DATASET == "simple":
-        data = minitorch.datasets["Simple"].simple(PTS)
+        data = minitorch.datasets["Simple"](PTS)
     elif args.DATASET == "split":
         data = minitorch.datasets["Split"](PTS)
 

@@ -160,7 +160,6 @@ class Tensor:
         return Mul.apply(self._ensure_tensor(b), Inv.apply(self))
 
     def __matmul__(self, b: Tensor) -> Tensor:
-        "Not used until Module 3"
         return MatMul.apply(self, b)
 
     def __lt__(self, b: TensorLike) -> Tensor:

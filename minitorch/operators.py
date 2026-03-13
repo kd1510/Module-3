@@ -45,7 +45,7 @@ def sigmoid(x: float) -> float:
 
 
 def relu(x: float) -> float:
-    return max(0.0, x)
+    return x if x > 0.0 else 0.0
 
 
 def log(x: float) -> float:

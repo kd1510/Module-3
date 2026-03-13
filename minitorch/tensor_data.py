@@ -83,10 +83,8 @@ def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
             # e.g 121 minutes % 60 = 2. The minute hand would be on 2.
             ix.append(divided % dimsize)
 
-    if ordinal < 0:
-        raise IndexingError
-
-    out_index = ix[::-1]
+    for i, val in enumerate(ix[::-1]):
+        out_index[i] = val
 
 
 def broadcast_index(

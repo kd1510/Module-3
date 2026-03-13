@@ -168,11 +168,11 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        # Create temporary index buffers
-        out_index = np.zeros(len(out_shape), dtype=np.int32)
-        in_index = np.zeros(len(in_shape), dtype=np.int32)
+        for i in prange(len(out)):
+            # Keep these in the loop to avoid false data sharing between cores.
+            out_index = np.zeros(len(out_shape), dtype=np.int32)
+            in_index = np.zeros(len(in_shape), dtype=np.int32)
 
-        for i in range(len(out)):
             # 1. Convert flat output position to multi-dimensional index
             to_index(i, out_shape, out_index)
 
@@ -222,8 +222,23 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        # TODO: Implement for Task 3.1.
-        raise NotImplementedError("Need to implement for Task 3.1")
+        for i in prange(len(out)):
+            out_index = np.empty(len(out_shape), dtype=np.int32)
+            a_index = np.empty(len(a_shape), dtype=np.int32)
+            b_index = np.empty(len(b_shape), dtype=np.int32)
+
+            to_index(i, out_shape, out_index)
+
+            # 2. Where is that in Tensor A (handling broadcasting)?
+            broadcast_index(out_index, out_shape, a_shape, a_index)
+            a_pos = index_to_position(a_index, a_strides)
+
+            # 3. Where is that in Tensor B (handling broadcasting)?
+            broadcast_index(out_index, out_shape, b_shape, b_index)
+            b_pos = index_to_position(b_index, b_strides)
+
+            # 4. Grab the data, run the function, and save it
+            out[i] = fn(a_storage[a_pos], b_storage[b_pos])
 
     return njit(_zip, parallel=True)  # type: ignore
 
@@ -258,8 +273,27 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        # TODO: Implement for Task 3.1.
-        raise NotImplementedError("Need to implement for Task 3.1")
+        for i in prange(len(a_storage)):
+            input_index = np.empty(len(a_shape), dtype=np.int32)
+            # Find out the index for the a_tensor for the current element, i.e (3, 2, 2)
+            value = a_storage[i]
+            to_index(i, a_shape, input_index)
+
+            # The output tensor index will be just the reducing dimension removed, i.e dim 1, (3, 0, 2)
+            # Setting to zero means when we calculate the position in out storage,
+            # the stride of that dim does not contribute.
+            output_index = input_index.copy() # set REDUCE_DIM to 0
+            output_index[reduce_dim] = 0
+
+            # We can simply apply the function to the current value of the output storage at that index,
+            # With the current value of the output storage at that index and the new input value, and set it
+            output_storage_ix = index_to_position(output_index, out_strides)
+            out[output_storage_ix] = fn(out[output_storage_ix], value)
+
+            # Once we iterate through every element in the input, they will have been reduced to the output
+            # indices incrementally.
+
+        return None
 
     return njit(_reduce, parallel=True)  # type: ignore
 
@@ -310,9 +344,25 @@ def _tensor_matrix_multiply(
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
 
-    # TODO: Implement for Task 3.2.
-    raise NotImplementedError("Need to implement for Task 3.2")
+    #  If you are multiplying matrix A (size I x J) by matrix B (size J x K), your resulting matrix C will be size I X  K.
+    shared_dim = a_shape[-1]
 
+    for b in range(out_shape[0]):
+        for i in range(0, out_shape[-2]):
+            for k in range(0, out_shape[-1]):
+                dot_product = 0
+
+                for j in range(0, shared_dim):
+                    a_loc = (b * a_batch_stride) + (i * a_strides[-2]) + (j * a_strides[-1])
+                    b_loc = (b * b_batch_stride) + (j * b_strides[-2]) + (k * b_strides[-1])
+
+                    a_val = float(a_storage[a_loc])
+                    b_val = float(b_storage[b_loc])
+
+                    dot_product += a_val * b_val
+
+                out_ix = (b * out_strides[0]) + (i * out_strides[-2]) + (k * out_strides[-1])
+                out[out_ix] = dot_product
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
 assert tensor_matrix_multiply is not None
