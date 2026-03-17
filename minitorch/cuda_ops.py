@@ -1,11 +1,12 @@
 # type: ignore
 # Currently pyright doesn't support numba.cuda
 
-from typing import Callable, Optional, TypeVar, Any
+from typing import Any, Callable, Optional, TypeVar
 
 import numba
 from numba import cuda
 from numba.cuda import jit as _jit
+
 from .tensor import Tensor
 from .tensor_data import (
     MAX_DIMS,
@@ -173,8 +174,20 @@ def tensor_map(
         out_index = cuda.local.array(MAX_DIMS, numba.int32)
         in_index = cuda.local.array(MAX_DIMS, numba.int32)
         i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
-        # TODO: Implement for Task 3.3.
-        raise NotImplementedError("Need to implement for Task 3.3")
+
+        # We want to convert each ordinal index in output into the correct index for the input.
+        # We don't need an outer loop over the ordinals of output as each thread will calculate it in parallel.
+
+        to_index(i, out_shape, out_index)
+        broadcast_index(out_index, out_shape, in_shape, in_index)
+        position_in_input = index_to_position(in_index, in_strides)
+
+        # print("ordinal: ", i, "  out index: ", out_index[0], ",", out_index[1])
+        # print("ordinal: ", i, " position in output ", position_in_input)
+
+        out[i] = fn(in_storage[position_in_input])
+
+        return
 
     return cuda.jit()(_map)  # type: ignore
 
@@ -215,6 +228,8 @@ def tensor_zip(
         a_index = cuda.local.array(MAX_DIMS, numba.int32)
         b_index = cuda.local.array(MAX_DIMS, numba.int32)
         i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
+
+        print(i)
 
         # TODO: Implement for Task 3.3.
         raise NotImplementedError("Need to implement for Task 3.3")
@@ -338,6 +353,7 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
 
     """
     BLOCK_DIM = 32
+    print("HELELEL")
     # TODO: Implement for Task 3.3.
     raise NotImplementedError("Need to implement for Task 3.3")
 

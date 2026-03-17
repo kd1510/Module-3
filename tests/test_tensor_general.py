@@ -40,6 +40,15 @@ if numba.cuda.is_available():
 
 
 # ## Task 3.1 and 3.3
+#
+def test_krish_map_cuda():
+    x = [[random.random() for i in range(32)] for j in range(16)]
+    t = minitorch.tensor(x, backend=shared["cuda"])
+    t2 = -t
+
+    breakpoint()
+
+    assert 1 == 2
 
 
 @given(lists(small_floats, min_size=1))
@@ -190,16 +199,18 @@ if numba.cuda.is_available():
     def test_mul_practice1() -> None:
         x1 = [[random.random() for i in range(2)] for j in range(2)]
         y1 = [[random.random() for i in range(2)] for j in range(2)]
-        z = minitorch.tensor(x1, backend=shared["fast"]) @ minitorch.tensor(
-            y1, backend=shared["fast"]
-        )
+        # z = minitorch.tensor(x1, backend=shared["fast"]) @ minitorch.tensor(
+        #     y1, backend=shared["fast"]
+        # )
 
         x = minitorch.tensor(x1, backend=shared["cuda"])
         y = minitorch.tensor(y1, backend=shared["cuda"])
         z2 = minitorch.mm_practice(x, y)
-        for i in range(2):
-            for j in range(2):
-                assert_close(z[i, j], z2._storage[2 * i + j])
+
+        breakpoint()
+        # for i in range(2):
+        # for j in range(2):
+        # assert_close(z[i, j], z2._storage[2 * i + j])
 
     @pytest.mark.task3_4
     def test_mul_practice2() -> None:

@@ -16,6 +16,7 @@ MAX_DIMS = 32
 
 class IndexingError(RuntimeError):
     "Exception raised for indexing errors."
+
     pass
 
 
@@ -44,8 +45,9 @@ def index_to_position(index: Index, strides: Strides) -> int:
     """
     pos = 0
     for i, s in enumerate(strides):
-        pos += (s * index[i])
+        pos += s * index[i]
     return pos
+
 
 def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
     """
@@ -60,15 +62,15 @@ def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
         out_index : return index corresponding to position.
 
     """
-    ix = []
-    # breakpoint()
-    for i, dimsize in enumerate(shape[::-1]):
-        if i == 0:
-            ix.append(ordinal % dimsize)
+
+    for i, dimsize in enumerate(shape):
+        if i == len(shape) - 1:
+            # Fastest changing dimension has stride of one
+            out_index[i] = ordinal % dimsize
         else:
             # Multiply together all the dimensions after this one.
             # This gives us the stride for the current dimension.
-            after_dims = shape[len(shape)-i:]
+            after_dims = shape[i + 1 :]
             total = 1
             for d2 in after_dims:
                 total *= d2
@@ -81,10 +83,8 @@ def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
             # This is to eliminate the contribution from the higher dimensions
             # Think of a clock and where the minute hand would be.
             # e.g 121 minutes % 60 = 2. The minute hand would be on 2.
-            ix.append(divided % dimsize)
-
-    for i, val in enumerate(ix[::-1]):
-        out_index[i] = val
+            #
+            out_index[i] = divided % dimsize
 
 
 def broadcast_index(
@@ -148,7 +148,9 @@ def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
             # Do you repeat in order, or all together per row etc?
             # Repeats have many permutations
             if i != j and not (i == 1 or j == 1):
-                raise IndexingError(f"Cannot broadcast shapes {shape1} x {shape2}. Dim {i} cannot match dim {j}")
+                raise IndexingError(
+                    f"Cannot broadcast shapes {shape1} x {shape2}. Dim {i} cannot match dim {j}"
+                )
             union.append(max(i, j))
 
         return tuple(union)
@@ -171,6 +173,7 @@ def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
                 union.append(max(bsx, ssx))
 
     return tuple(reversed(union))
+
 
 def strides_from_shape(shape: UserShape) -> UserStrides:
     layout = [1]
@@ -285,9 +288,9 @@ class TensorData:
         Returns:
             New `TensorData` with the same storage and a new dimension order.
         """
-        assert list(sorted(order)) == list(
-            range(len(self.shape))
-        ), f"Must give a position to each dimension. Shape: {self.shape} Order: {order}"
+        assert list(sorted(order)) == list(range(len(self.shape))), (
+            f"Must give a position to each dimension. Shape: {self.shape} Order: {order}"
+        )
 
         new_shape = []
         new_strides = []
