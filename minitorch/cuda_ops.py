@@ -241,7 +241,7 @@ def tensor_zip(
     return cuda.jit()(_zip)  # type: ignore
 
 
-def _sum_practice(out: Storage, a: Storage, size: int) -> None:
+def _sum_practice_atomic(out: Storage, a: Storage, size: int) -> None:
     """This is a practice sum kernel to prepare for reduce.
 
     Given an array of length $n$ and out of size $n // \text{blockDIM}$
@@ -268,11 +268,66 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
     i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
     pos = cuda.threadIdx.x
 
-    # TODO: Implement for Task 3.3.
-    raise NotImplementedError("Need to implement for Task 3.3")
+    cuda.atomic.add(cache, 0, a[i])
+
+    # Write number
+    cuda.atomic.add(cache, 1, 1)
+
+    print("total ", cache[0])
+    print("Write number, ", cache[1])
+    print("size ", size, "block dim: ", BLOCK_DIM)
+
+    if cache[1] < (size // BLOCK_DIM) - 1:
+        out[0] = cache[0]
 
 
-jit_sum_practice = cuda.jit()(_sum_practice)
+def _sum_practice_tree(out: Storage, a: Storage, size: int):
+    # Should coordinate threads to accumulate the input storage in a tree.
+    # Would be logarithmic based on the number of threads , which is always 32 anyway.
+    cache = cuda.shared.array(BLOCK_DIM, numba.float64)
+    i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
+    pos = cuda.threadIdx.x
+
+    # If the thread ID is greater than the size of the input, do nothing
+    if pos > size:
+        return
+
+    # If the thread ID is smaller than half the size of input, do a reduction
+    if pos <= (size / 2):
+        # Take two values from input
+        # Sum them together
+        # Write to cache
+        pass
+
+    # TODO: we need to use the syncthreads() method.
+    # This will place a barrier so a thread waits for every other thread to reach that point.
+    #  I guess it goes inbetween each reduction pass
+
+    # The next threads (before the last two) do another round of reduction
+    elif pos > (size / 2) and pos <= (size - 2):
+        pass
+
+    # The next thread does the final summation and write to output storage.
+    elif pos == size - 1:
+        pass
+
+
+"""
+Testing out different implementations of kernel for summing
+
+Basic: Using atomic write operations for each thread to the same shared memory per block.
+Should be the slowest as every thread's write is essentially being serialized.
+
+Divide-and-conq: Can we get each thread to sum up two numbers from the input, write to shared,
+and then use other threads to read and sum up the shared memory until all the numbers have been summed?
+Essentially creating a tree of work and coordinating threads in a block to do this.
+
+Other:
+    apparently there is some "shuffle" instructions in a warp that can be used as the "fastest approach".
+
+"""
+
+jit_sum_practice = cuda.jit()(_sum_practice_atomic)
 
 
 def sum_practice(a: Tensor) -> TensorData:

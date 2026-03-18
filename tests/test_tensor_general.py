@@ -142,12 +142,13 @@ def test_reduce(
 if numba.cuda.is_available():
 
     @pytest.mark.task3_3
-    def test_sum_practice() -> None:
+    def test_sum_practice1() -> None:
         x = [random.random() for i in range(16)]
         b = minitorch.tensor(x)
         s = b.sum()[0]
         b2 = minitorch.tensor(x, backend=shared["cuda"])
         out = minitorch.sum_practice(b2)
+        # breakpoint()
         assert_close(s, out._storage[0])
 
     @pytest.mark.task3_3
