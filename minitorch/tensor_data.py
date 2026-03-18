@@ -116,6 +116,7 @@ def broadcast_index(
 
         if shape[i] == 1:
             # If the dimension is 1, we force the index to 0 (Broadcasting!)
+            # WHen we calculate the position in flat storage, the contribution from this dimension will be negated
             out_index[i] = 0
         else:
             # Otherwise, the small dimension must match the big dimension

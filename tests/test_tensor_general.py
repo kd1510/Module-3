@@ -42,9 +42,10 @@ if numba.cuda.is_available():
 # ## Task 3.1 and 3.3
 #
 def test_krish_map_cuda():
-    x = [[random.random() for i in range(32)] for j in range(16)]
+    x = [[1 for i in range(32)] for j in range(16)]
     t = minitorch.tensor(x, backend=shared["cuda"])
-    t2 = -t
+    t2 = minitorch.tensor(x, backend=shared["cuda"])
+    t3 = t + t2
 
     breakpoint()
 
